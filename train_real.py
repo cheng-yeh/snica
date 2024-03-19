@@ -214,9 +214,13 @@ def full_train(x, N, K, d, args, est_key):
               "eseed: {es}\t"
               "pseed: {ps}".format(epoch, num_epochs, -n_elbo, niters, len(qz), f_mu_est.shape,
                                    es=args.est_seed, ps=args.param_seed))
-        if (epochi + 1) % 10 == 0:
+        print(f"qz[0][:, :, 0].shape: {qz[0][:, :, 0].shape}")
+        print(f"")
+        if (epoch + 1) % 10 == 0:
             with open(f"./data/alice_eeg/24chans_f_n{N}_k{K}_d{d}.pkl", 'wb') as f:
                 pickle.dump(f_mu_est, f)
+            with open(f"./data/alice_eeg/24chans_z_n{N}_k{K}_d{d}.pkl", 'wb') as f:
+                pickle.dump(qz[0][:, :, 0], f)
         '''
         qz, qzlag_z, qu, quu = posteriors
         mcc, _, sort_idx = matching_sources_corr(qz[0][:, :, 0], z_mu[:, :, 0])
