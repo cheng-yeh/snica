@@ -56,7 +56,7 @@ def parse():
                         help="num. of hidden units in encoder estimator MLP")
     parser.add_argument('--hidden-units-dec', type=int, default=64,
                         help="num. of hidden units in decoder estimator MLP")
-    parser.add_argument('--hidden-layers-enc', type=int, default=2,
+    parser.add_argument('--hidden-layers-enc', type=int, default=1,
                         help="num. of hidden layers in encoder estimator MLP")
     parser.add_argument('--hidden-layers-dec', type=int, default=1,
                         help="num. of hidden layers in decoder estimator MLP")
@@ -75,6 +75,8 @@ def parse():
     parser.add_argument('--plot-freq', type=int, default=10,
                         help="plotting frequency")
     # saving and loading
+    parser.add_argument('--input-data', type=str, default="data/",
+                        help="location where input data is loaded")
     parser.add_argument('--out-dir', type=str, default="output/",
                         help="location where data is saved")
     parser.add_argument('--resume-best', action='store_true', default=False,
@@ -106,10 +108,11 @@ def main():
     # Read from the Alice EEG dataset
     # Specify the path to the pickle file
     #pickle_file_path = "./data/alice_eeg/24chans.pkl"
-    pickle_file_path = "./data/alice_eeg/24chans_fmin5_fmax5000_rwin100_samp100.pkl"
+    #pickle_file_path = "./data/alice_eeg/24chans_fmin5_fmax5000_rwin100_samp100.pkl"
+    pickle_file_path = "./data/alice_eeg/24chans_fmin4000_fmax30000_rwin2_samp5.pkl"
 
     # Read the NumPy array from the pickle file
-    with open(pickle_file_path, 'rb') as f:
+    with open(args.input_data, 'rb') as f:
         x = pickle.load(f)
         x = jnp.array(x)
         print("x.shape: ", x.shape)
