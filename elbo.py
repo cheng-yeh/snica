@@ -3,7 +3,6 @@ import pdb
 
 import jax
 from jax import jit, vmap
-from jax.config import config
 from jax.experimental import host_callback
 from jax.lax import scan
 import jax.numpy as jnp
@@ -24,7 +23,7 @@ from utils import (
     invmp,
 )
 
-config.update("jax_enable_x64", True)
+jax.config.update("jax_enable_x64", True)
 
 
 #@jit
@@ -90,7 +89,7 @@ def E_sampling_likelihood(x, s_sample, theta, R):
     return E_logp_xs.sum(1).mean()
 
 
-@partial(jit, static_argnums=(8, 9,))
+#@partial(jit, static_argnums=(8, 9,))
 def ELBO(x, R, lds_params, log_hmm_params, phi, theta, nu, key,
          inference_iters, num_samples):
     # transform into natural parameter form
@@ -109,6 +108,9 @@ def ELBO(x, R, lds_params, log_hmm_params, phi, theta, nu, key,
         likelihood_natparams = vmap(lambda a: encoder_mlp(phi, a),
                                     in_axes=-1, out_axes=(-1, -1))(x)
     elif len(phi) == 1:
+        print(x.shape)
+        print(R.shape)
+        print(theta[0][0].shape)
         C = theta[0][0].T
         np0 = C.T@R@x
         np1 = -0.5*C.T@R@C

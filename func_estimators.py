@@ -1,6 +1,5 @@
-from jax.config import config
-
-config.update("jax_enable_x64", True)
+import jax
+jax.config.update("jax_enable_x64", True)
 
 import pdb
 
@@ -9,7 +8,6 @@ import jax.numpy as jnp
 import jax.random as jrandom
 from jax import vmap
 from jax.lax import scan
-from jax.ops import index, index_update
 
 
 def l2normalize(W, axis=0):
@@ -67,7 +65,7 @@ def unif_nica_layer(N, M, key, iter_4_cond=1e4):
         return A, _cond
 
     # generate multiple matrices
-    keys = jrandom.split(key, iter_4_cond)
+    keys = jrandom.split(key, int(iter_4_cond))
     A, conds = vmap(_gen_matrix, (None, None, 0))(N, M, keys)
     target_cond = jnp.percentile(conds, 25)
     target_idx = jnp.argmin(jnp.abs(conds-target_cond))
@@ -83,7 +81,7 @@ def init_nica_params(N, M, nonlin_layers, key, repeat_layers):
         _keys = keys
         keys = jnp.repeat(_keys[0][None], _keys.shape[0], 0)
         if N != M:
-            keys = index_update(keys, index[1:], _keys[-1])
+            keys.at[jnp.index_exp[1:]].set(_keys[-1])
     return [unif_nica_layer(n, m, k) for (n, m, k)
             in zip(layer_sizes[:-1], layer_sizes[1:], keys)]
 

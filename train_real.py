@@ -1,6 +1,7 @@
 import os
 import time
 import pdb
+import pickle
 
 import jax
 jax.config.update("jax_debug_nans", True)
@@ -25,10 +26,9 @@ from utils import save_best, load_best_ckpt
 import matplotlib.pyplot as plt
 
 
-def full_train(x, z_mu, states, params, args, est_key):
+def full_train(x, N, K, d, args, est_key):
     print("Running with:", args)
     # unpack some of the args
-    N = z_mu.shape[0]
     M, T = x.shape
     num_epochs = args.num_epochs
     inference_iters = args.inference_iters
@@ -43,8 +43,6 @@ def full_train(x, z_mu, states, params, args, est_key):
     decay_rate = args.decay_rate
     burnin_len = args.burnin
     plot_freq = args.plot_freq
-    mix_params, lds_params, hmm_params = params
-    _, K, d = lds_params[0].shape
 
     # initialize pgm parameters randomly
     est_key = jrandom.PRNGKey(est_key)
@@ -109,7 +107,7 @@ def full_train(x, z_mu, states, params, args, est_key):
         start_epoch, all_params, opt_state, tx = load_best_ckpt(args)
 
     # define training step
-    @partial(jit, static_argnums=(4, 5))
+    #@partial(jit, static_argnums=(4, 5))
     def training_step(epoch_num, params, opt_state, x,
                       inference_iters, num_samples, burnin, key):
         """Performs gradient step on the function estimator
@@ -157,7 +155,7 @@ def full_train(x, z_mu, states, params, args, est_key):
         return n_elbo, posteriors, params, opt_state
 
 
-    @partial(jit, static_argnums=(4, 5))
+    #@partial(jit, static_argnums=(4, 5))
     def infer_step(epoch_num, params, opt_state, x,
                    inference_iters, num_samples, burnin, key):
         """Perform inference without gradient step for eval purposes
@@ -188,6 +186,7 @@ def full_train(x, z_mu, states, params, args, est_key):
     # train
     best_elbo = -jnp.inf
     for epoch in range(start_epoch, num_epochs):
+        print("Epoch: ", epoch, best_elbo)
         tic = time.time()
         niters = min(inference_iters, ((epoch // 100) + 1) * 5)
         key, trainkey = jrandom.split(key, 2)
@@ -204,6 +203,22 @@ def full_train(x, z_mu, states, params, args, est_key):
                 num_samples, burnin_len, trainkey)
 
         # evaluate
+        qz, qzlag_z, qu, quu = posteriors
+        f_mu_est = vmap(decoder_mlp, in_axes=(None, -1),
+                        out_axes=-1)(all_params[1][1], qz[0][:, :, 0])
+        print("*Epoch: [{0}/{1}]\t"
+              "ELBO: {2}\t"
+              "num. infernce iters: {3}\t"
+              "len(qz): {4}\t"
+              "qz[0][:, :, 0]: {5}\t"
+              "f_mu_est.shape: {6}"
+              "eseed: {es}\t"
+              "pseed: {ps}".format(epoch, num_epochs, -n_elbo, niters, len(qz), qz[0][:, :, 0], f_mu_est.shape,
+                                   es=args.est_seed, ps=args.param_seed))
+        if epoch % 10 == 0:
+            with open("./data/alice_eeg/24chans_z.pkl", 'wb') as f:
+                pickle.dump(f_mu_est, f)
+        '''
         qz, qzlag_z, qu, quu = posteriors
         mcc, _, sort_idx = matching_sources_corr(qz[0][:, :, 0], z_mu[:, :, 0])
         f_mu_est = vmap(decoder_mlp, in_axes=(None, -1),
@@ -235,6 +250,7 @@ def full_train(x, z_mu, states, params, args, est_key):
                 plot_ic(u_n, z_mu_n, qu_n, qz_mu_n, qz_prec_n,
                         ax[0, n], ax[1, n], ax2[1, n])
             plt.pause(.5)
+        '''
 
         # saving
         if -n_elbo > best_elbo:

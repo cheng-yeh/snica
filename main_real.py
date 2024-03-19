@@ -1,16 +1,18 @@
 import argparse
 import pdb
 import sys
+import pickle
 
 import jax
 jax.config.update("jax_enable_x64", True)
 
 import jax.random as jrandom
+import jax.numpy as jnp
 import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
 
 from data_generation import gen_slds_nica
-from train import full_train
+from train_real import full_train
 
 # uncomment to debug NaNs
 #config.update("jax_debug_nans", True)
@@ -28,13 +30,13 @@ def parse():
                         help="dimension of observed data")
     parser.add_argument('-t', type=int, default=100000,
                         help="number of timesteps")
-    parser.add_argument('-l', type=int, default=1,
+    parser.add_argument('-l', type=int, default=2,
                         help="number of nonlinear layers; 0 = linear ICA")
-    parser.add_argument('-d', type=int, default=2,
+    parser.add_argument('-d', type=int, default=4,
                         help="dimension of lds state. Fixed at 2 in experim.")
-    parser.add_argument('-k', type=int, default=2,
+    parser.add_argument('-k', type=int, default=4,
                         help="number of HMM states. Fixed at 2 in experients")
-    parser.add_argument('--whiten', action='store_true', default=False,
+    parser.add_argument('--whiten', action='store_true', default=True,
                         help="PCA whiten data as preprocessing")
     parser.add_argument('--gt-gm-params', action='store_true', default=False,
                         help="debug with GM parameters at ground truth")
@@ -93,11 +95,23 @@ def main():
     data_key = jrandom.PRNGKey(args.data_seed)
 
     # generate simulated data
+    '''
     # !BEWARE d=2, k=2 fixed in data generation code
     x, f, z, z_mu, states, *params = gen_slds_nica(args.n, args.m, args.t,
                                                    args.k, args.d, args.l,
                                                    param_key, data_key,
                                                    repeat_layers=True)
+    '''
+
+    # Read from the Alice EEG dataset
+    # Specify the path to the pickle file
+    pickle_file_path = "./data/alice_eeg/24chans.pkl"
+
+    # Read the NumPy array from the pickle file
+    with open(pickle_file_path, 'rb') as f:
+        x = pickle.load(f)
+        x = jnp.array(x)
+        print("x.shape: ", x.shape)
 
     # we have not tried this option but could be useful in some cases
     if args.whiten:
@@ -105,8 +119,7 @@ def main():
         x = pca.fit_transform(x.T).T
 
     # train
-    est_params, posteriors, best_elbo = full_train(x, z_mu, states,
-                                                   params, args, args.est_seed)
+    est_params, posteriors, best_elbo = full_train(x, args.n, args.k, args.d, args, args.est_seed)
 
 
 if __name__ == "__main__":

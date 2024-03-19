@@ -1,5 +1,5 @@
-from jax.config import config
-config.update("jax_enable_x64", True)
+import jax
+jax.config.update("jax_enable_x64", True)
 
 import os
 import pdb
@@ -13,7 +13,6 @@ import jax.numpy as jnp
 from jax import random as jrandom
 from jax import vmap
 from jax import jit, lax
-from jax.ops import index_update, index_add, index
 from jax.lax import scan
 
 import pickle
@@ -48,7 +47,7 @@ def get_prec_mat(n, prec_scale, key):
     return prec_mat
 
 
-@partial(jit, static_argnums=(0,))
+#@partial(jit, static_argnums=(0,))
 def get_mixing_mat(n, key, iters=1000):
     '''Create a linear mixing matrices with their condition number
         n: dimension of the (square) matrix
@@ -165,11 +164,12 @@ def get_E_likelihood_natparams(likelih_natparams, qz_mu, n):
     d = qz_mu.shape[-1]
     v_n, W_n = likelih_natparams
     qs_mu = qz_mu[:, :, 0]
-    E_v_n = index_update(jnp.zeros((v_n.shape[0], d)), index[:, 0], v_n)
-    E_v_n = index_add(E_v_n, index[:, 0],
-                      2*((W_n*qs_mu).sum(0)-W_n[n]*qs_mu[n]))
-    E_W_n = index_update(jnp.zeros((v_n.shape[0], d, d)),
-                         index[:, 0, 0], W_n[n])
+    E_v_n = jnp.zeros((v_n.shape[0], d))
+    E_v_n.at[jnp.index_exp[:, 0]].set(v_n)
+    E_v_n.at[jnp.index_exp[:, 0]].set(2*((W_n*qs_mu).sum(0)-W_n[n]*qs_mu[n]))
+    E_W_n = jnp.zeros((v_n.shape[0], d, d))
+    E_W_n.at[jnp.index_exp[:, 0, 0]].set(W_n[n])
+    
     return E_v_n, E_W_n
 
 
@@ -198,14 +198,14 @@ def vrepeat_tuple(tpl, T):
 
 
 def tree_prepend(prep, tree):
-    preprended = jax.tree_multimap(
+    preprended = jax.tree_map(
         lambda a, b: jnp.vstack((a[None], b)), prep, tree
     )
     return preprended
 
 
 def tree_append(tree, app):
-    appended = jax.tree_multimap(
+    appended = jax.tree_map(
         lambda a, b: jnp.vstack((a, b[None])), tree, app
     )
     return appended
@@ -213,11 +213,11 @@ def tree_append(tree, app):
 
 def tree_sum(trees):
     '''Sum over pytrees'''
-    return jax.tree_multimap(lambda *x: sum(x), *trees)
+    return jax.tree_map(lambda *x: sum(x), *trees)
 
 
 def tree_sub(tree1, tree2):
-    return jax.tree_multimap(
+    return jax.tree_map(
         lambda a, b: a-b, tree1, tree2)
 
 
@@ -238,7 +238,7 @@ def tree_get_idx(idx, tree):
 
 def multi_tree_stack(trees):
     '''Stack trees along a new axis'''
-    return jax.tree_multimap(lambda *a: jnp.stack(a), *trees)
+    return jax.tree_map(lambda *a: jnp.stack(a), *trees)
 
 
 # inv(L*L.T)*Y
@@ -250,7 +250,30 @@ def invcholp(L, Y):
 
 # inv(X)*Y
 def invmp(X, Y):
-    return invcholp(jnp.linalg.cholesky(X), Y)
+
+    # Regularization parameter
+    epsilon = 1e1
+    #print("Epsilon: ", epsilon)
+    # Add regularization to the diagonal elements
+    X_reg = X + epsilon * jnp.eye(X.shape[0])
+
+    X_reg = jnp.triu(X_reg) + jnp.triu(X_reg).T + jnp.diag(jnp.diag(X_reg))
+
+    #print("Call invmp")
+    #print("X.shape: ", X.shape)
+    #print(X)
+    #print("X_reg.shape: ", X_reg.shape)
+    #print(X)
+    #print(X_reg)
+    #print(X_reg)
+    #print("Y.shape: ", Y.shape)
+    #print(Y)
+    #print(Y)
+    #print("Symmetric? ", jnp.allclose(X_reg, X_reg.T))
+    #eigvals = jnp.linalg.eigvals(X_reg)
+    #print("Positive definite? ", jnp.all(eigvals > 0))
+    
+    return invcholp(jax.scipy.linalg.cholesky(X, lower=True), Y)
 
 
 def gaussian_sample_from_mu_prec(mu, prec, key):

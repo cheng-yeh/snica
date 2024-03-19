@@ -1,5 +1,5 @@
-from jax.config import config
-config.update("jax_enable_x64", True)
+import jax
+jax.config.update("jax_enable_x64", True)
 
 import pdb
 
@@ -8,7 +8,6 @@ import jax.numpy as jnp
 import jax.random as jrandom
 from jax import vmap, jit
 from jax.lax import scan
-from jax.ops import index, index_update, index_add
 from jax.scipy.special import logsumexp
 from jax.experimental import host_callback
 
@@ -19,8 +18,6 @@ from utils import tree_prepend, tree_append, tree_get_idx
 from utils import invmp
 
 import matplotlib.pyplot as plt
-
-from jax.config import config
 
 
 #@jit
@@ -118,8 +115,9 @@ def pw_posterior(natparams):
     eta_f, P_f, h, J, eta_b, P_b = natparams
     d = eta_f.shape[0]
     eta_pw = jnp.concatenate((eta_f+h[:d], eta_b+h[d:]))
-    P_pw = index_add(J, index[:d, :d], P_f)
-    P_pw = index_add(P_pw, index[d:, d:], P_b)
+    P_pw = J
+    P_pw.at[jnp.index_exp[:d, :d]].add(P_f)
+    P_pw.at[jnp.index_exp[d:, d:]].add(P_b)
     return (eta_pw, P_pw)
 
 
@@ -165,13 +163,17 @@ def lds_inference(z_posteriors, params):
     )
 
     # transform from natparams to mu-precision format
-    qz = jax.tree_multimap(lambda a, b: index_update(a, index[n], b),
+    qz = jax.tree_map(lambda a, b: index_update(a, jnp.index_exp[n], b),
                            qz, vmap(get_gauss_params)(qz_natparams))
-    qzlag_z = jax.tree_multimap(lambda a, b: index_update(a, index[n], b),
+    qzlag_z = jax.tree_map(lambda a, b: index_update(a, jnp.index_exp[n], b),
                                 qzlag_z,
                                 vmap(get_gauss_params)(qzlag_z_natparams))
     return (qz, qzlag_z), None
 
+def index_update(x, i, y):
+    x.at[i].set(y)
+
+    return x
 
 def make_inference(eta_hmm, eta_prior, eta_transition, eta_likelihood):
     #@jit
