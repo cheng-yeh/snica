@@ -3,3 +3,5 @@
 *.txt
 *.npz
 __pycache__/
+*.sbatch
+*.out
