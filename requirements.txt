@@ -12,6 +12,3 @@ opencv-python
 PyYAML
 gymnasium
 chex==0.1.85
-jax
-jaxlib
-optax

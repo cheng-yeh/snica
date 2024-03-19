@@ -210,13 +210,12 @@ def full_train(x, N, K, d, args, est_key):
               "ELBO: {2}\t"
               "num. infernce iters: {3}\t"
               "len(qz): {4}\t"
-              "qz[0][:, :, 0]: {5}\t"
-              "f_mu_est.shape: {6}"
+              "f_mu_est.shape: {5}"
               "eseed: {es}\t"
-              "pseed: {ps}".format(epoch, num_epochs, -n_elbo, niters, len(qz), qz[0][:, :, 0], f_mu_est.shape,
+              "pseed: {ps}".format(epoch, num_epochs, -n_elbo, niters, len(qz), f_mu_est.shape,
                                    es=args.est_seed, ps=args.param_seed))
-        if epoch % 10 == 0:
-            with open("./data/alice_eeg/24chans_z.pkl", 'wb') as f:
+        if (epochi + 1) % 10 == 0:
+            with open(f"./data/alice_eeg/24chans_f_n{N}_k{K}_d{d}.pkl", 'wb') as f:
                 pickle.dump(f_mu_est, f)
         '''
         qz, qzlag_z, qu, quu = posteriors
