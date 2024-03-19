@@ -105,7 +105,8 @@ def main():
 
     # Read from the Alice EEG dataset
     # Specify the path to the pickle file
-    pickle_file_path = "./data/alice_eeg/24chans.pkl"
+    #pickle_file_path = "./data/alice_eeg/24chans.pkl"
+    pickle_file_path = "./data/alice_eeg/24chans_fmin5_fmax5000_rwin100_samp100.pkl"
 
     # Read the NumPy array from the pickle file
     with open(pickle_file_path, 'rb') as f:
@@ -114,9 +115,9 @@ def main():
         print("x.shape: ", x.shape)
 
     # we have not tried this option but could be useful in some cases
-    if args.whiten:
-        pca = PCA(whiten=True)
-        x = pca.fit_transform(x.T).T
+    #if args.whiten:
+    #    pca = PCA(whiten=True)
+    #    x = pca.fit_transform(x.T).T
 
     # train
     est_params, posteriors, best_elbo = full_train(x, args.n, args.k, args.d, args, args.est_seed)
