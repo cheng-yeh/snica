@@ -30,11 +30,11 @@ def parse():
                         help="dimension of observed data")
     parser.add_argument('-t', type=int, default=100000,
                         help="number of timesteps")
-    parser.add_argument('-l', type=int, default=2,
+    parser.add_argument('-l', type=int, default=3,
                         help="number of nonlinear layers; 0 = linear ICA")
-    parser.add_argument('-d', type=int, default=4,
+    parser.add_argument('-d', type=int, default=5,
                         help="dimension of lds state. Fixed at 2 in experim.")
-    parser.add_argument('-k', type=int, default=4,
+    parser.add_argument('-k', type=int, default=5,
                         help="number of HMM states. Fixed at 2 in experients")
     parser.add_argument('--whiten', action='store_true', default=True,
                         help="PCA whiten data as preprocessing")
