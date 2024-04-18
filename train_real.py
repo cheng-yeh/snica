@@ -216,11 +216,11 @@ def full_train(x, N, K, d, args, est_key):
                                    es=args.est_seed, ps=args.param_seed))
         print(f"qz[0][:, :, 0].shape: {qz[0][:, :, 0].shape}")
         
-        if (epoch + 1) % 10 == 0:
+        if (epoch + 1) % 1000 == 0:
             append_name = args.input_data.split('.')[0].split('/')[-1]
-            with open(f"./data/alice_eeg/{append_name}_f_n{N}_k{K}_d{d}.pkl", 'wb') as f:
+            with open(f"./data/alice_eeg/{append_name}_f_n{N}_k{K}_d{d}_epoch{epoch+1}_elbo{-n_elbo}.pkl", 'wb') as f:
                 pickle.dump(f_mu_est, f)
-            with open(f"./data/alice_eeg/{append_name}_z_n{N}_k{K}_d{d}.pkl", 'wb') as f:
+            with open(f"./data/alice_eeg/{append_name}_z_n{N}_k{K}_d{d}_epoch{epoch+1}_elbo{-n_elbo}.pkl", 'wb') as f:
                 pickle.dump(qz[0][:, :, 0], f)
         '''
         qz, qzlag_z, qu, quu = posteriors
